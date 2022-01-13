@@ -1,0 +1,20 @@
+{
+    "name": "nikolausstoll/price-alerts",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "PriceAlerts\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Nikolaus Stoll",
+            "email": "mail@nikolausstoll.de"
+        }
+    ],
+    "require": {
+        "symfony/dom-crawler": "^6.0",
+        "symfony/css-selector": "^6.0",
+        "guzzlehttp/guzzle": "^7.4.1"
+    }
+}
