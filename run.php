@@ -1,62 +1,55 @@
 <?php
 
 use PriceAlerts\Crawler\Crawler;
+use PriceAlerts\Parser\Parser;
 
 require 'vendor/autoload.php';
 
-$sleepTime = 60;
-$sleepTimeMultiplier = 2;
+const sleepTime            = 60;
+const sleepTimeMultiplier  = 2;
+const maxPrice             = 220;
+const seller               = 'Amazon Warehouse';
 
-$maxPrice = 11.65;
-
-//startCrawler
-$crawler = (new Crawler())->crawl();
-
+$sleepTime = sleepTime;
 while(true) {
-    $found = false;
+    $crawler = (new Crawler())->crawl();
+    $offers = (new Parser($crawler))->parse();
 
-    //getTitle
-    $title = trim($crawler->filter("#aod-asin-title-text")->innerText());
+    $found = 0;
+    foreach ($offers as $offer) {
+        if (floatval($offer['price']) <= maxPrice && $offer['seller'] === seller) {
+            $found = 1;
 
-    $crawler->filter("#aod-offer")->each(function ($node) use ($title, &$found, $maxPrice) {
-
-        //getPrice
-        $pricePre = $node->filter(".a-price-whole")->innerText();
-        $priceDecimal = $node->filter(".a-price-fraction")->innerText();
-        $currency = $node->filter(".a-price-symbol")->innerText();
-        $price = $pricePre . ',' . $priceDecimal . ' ' . $currency;
-        //getSeller
-        $seller = $node->filter("#aod-offer-soldBy a")->innerText();
-        //getCondition
-        $condition = $node->filter("#aod-offer h5")->innerText();
-        //getConditionDescription
-        $conditionDescription = '';
-        $conditionDescriptionNode = $node->filter("#aod-condition-container .expandable-expanded-text");
-        if ($conditionDescriptionNode->count()) {
-            $conditionDescription = $conditionDescriptionNode->innerText();
-        }
-
-        if (floatval($pricePre . ',' . $priceDecimal) < $maxPrice && $seller === 'Amazon Warehouse') {
-
-            echo "$title ($seller)" .  PHP_EOL;
-            echo "$price ($condition)" . PHP_EOL;
-            echo $conditionDescription . PHP_EOL;
+            //offer found, send notifications
+            //send to console
+            echo $offer['title'] . ' (' . $offer['seller'] . ')' .  PHP_EOL;
+            echo $offer['price'] . $offer['currency'] . '(' . $offer['conditionShort'] . ')' .  PHP_EOL;
+            echo $offer['conditionLong'] .  PHP_EOL;
             echo "---" . PHP_EOL;
 
-            $notificationCommand = 'display notification "Condition: ' . $condition . '" with title "' . $title . '" subtitle "Price: ' . $price . '" sound name "Bottle"';
-            $scriptCommand = "osascript -e '" . $notificationCommand . "'";
-            $processHandle = popen($scriptCommand, 'r');
-            pclose($processHandle);
-
-            $found = true;
-
+            //send to os notification center
+            sendToOsNotificationCenter(
+                $offer['title'],
+                $offer['price'] . $offer['currency'],
+                $offer['conditionShort'],
+                'Bottle'
+            );
         }
-    });
-
-    //increase sleeptime when item is found to avoid too m any notifications
-    if ($found) {
-        $sleepTime *= $sleepTimeMultiplier;
     }
 
+    //increase sleep time when offer was found to avoid too many notifications
+    $sleepTime += $sleepTime * sleepTimeMultiplier * $found;
     sleep($sleepTime);
+}
+
+//helpers
+function sendToOsNotificationCenter(string $title, string $subtitle, string $message, string $soundName): void
+{
+    $command = '
+        display notification "' . $message . '" with title "' . $title . '" subtitle "' . $subtitle . '" sound name "' . $soundName. '"
+    ';
+    $osascriptCommand = "osascript -e '" . $command . "'";
+
+    $processHandle = popen($osascriptCommand, 'r');
+    pclose($processHandle);
 }

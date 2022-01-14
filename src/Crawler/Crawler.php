@@ -9,6 +9,7 @@ use Symfony\Component\DomCrawler\Crawler as SymfonyCrawler;
 
 class Crawler
 {
+    const productId = "B087VM5XC6";
     private String $baseUrl = "https://www.amazon.de/gp/product/ajax/ref=auto_load_aod";
     private Client $guzzleClient;
     private CookieJar $cookieJar;
@@ -21,8 +22,7 @@ class Crawler
 
     public function crawl(): SymfonyCrawler
     {
-        $productId = "B081FWVSG8";
-        $productUrl = $this->baseUrl . '?asin=' . $productId . '&pc=dp&experienceId=aodAjaxMain';
+        $productUrl = $this->baseUrl . '?asin=' . self::productId . '&pc=dp&experienceId=aodAjaxMain';
 
         $response = $this->guzzleClient->request('GET', $productUrl, self::getRequestOptions());
 
